@@ -22,7 +22,7 @@ jobs:
       GH_REPO: ${{ github.repository }}
       TAG: v1.0.0
       PACKAGE: pkg_teya_hikashop-1.0.0.zip
-      EXPECTED_SHA256: 74010138fa0b11b5eef05dc3f226e1262e40029984c9e883d0e31d4923bbf93f
+      EXPECTED_SHA256: 42870403f2d30da85ef25cadc5a196986919d37874083bc4147b540997cd9071
     steps:
       - name: Fetch reviewed source, verify archive and create draft
         shell: bash
@@ -38,6 +38,7 @@ jobs:
           (cd dist && sha256sum "$PACKAGE" > "$PACKAGE.sha256")
           if gh release view "$TAG" --json isDraft --jq '.isDraft' > /tmp/teya-release-state; then
             test "$(cat /tmp/teya-release-state)" = true || { echo 'Refusing to modify a published release'; exit 1; }
+            gh release edit "$TAG" --draft --target "$GITHUB_SHA" --notes-file docs/RELEASE-NOTES.md
             gh release upload "$TAG" "dist/$PACKAGE" "dist/$PACKAGE.sha256" --clobber
           else
             gh release create "$TAG" --draft --target "$GITHUB_SHA" \
@@ -45,5 +46,6 @@ jobs:
               --notes-file docs/RELEASE-NOTES.md \
               "dist/$PACKAGE" "dist/$PACKAGE.sha256"
           fi
+          test "$(gh release view "$TAG" --json isDraft --jq '.isDraft')" = true
           gh release view "$TAG" --json url,isDraft,assets \
             --jq '{url:.url,isDraft:.isDraft,assets:[.assets[]|{name:.name,size:.size}]}'

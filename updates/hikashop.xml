@@ -9,7 +9,7 @@
     <maintainer>Webensol</maintainer>
     <maintainerurl>https://github.com/webensol/teya-payments-for-joomla-hikashop</maintainerurl>
     <php_minimum>8.2</php_minimum>
-    <sha256>74010138fa0b11b5eef05dc3f226e1262e40029984c9e883d0e31d4923bbf93f</sha256>
+    <sha256>42870403f2d30da85ef25cadc5a196986919d37874083bc4147b540997cd9071</sha256>
     <infourl title="Release notes">https://github.com/webensol/teya-payments-for-joomla-hikashop/releases/tag/v1.0.0</infourl>
     <downloads>
       <downloadurl type="full" format="zip">https://github.com/webensol/teya-payments-for-joomla-hikashop/releases/download/v1.0.0/pkg_teya_hikashop-1.0.0.zip</downloadurl>

@@ -1,4 +1,9 @@
 <?php
+/**
+ * @package Teya Payments for HikaShop
+ * @author Webensol
+ * @license GNU General Public License version 3; see LICENSE.txt
+ */
 /** Run from the Joomla root: php plugins/hikashoppayment/teya/cli/refunds.php */
 if (PHP_SAPI !== 'cli') {
     http_response_code(404);
@@ -28,7 +33,7 @@ $container->alias('session', 'session.web.site')
 $app = $container->get(\Joomla\CMS\Application\SiteApplication::class);
 \Joomla\CMS\Factory::$application = $app;
 $app->loadLanguage(\Joomla\CMS\Factory::getLanguage());
-// VirtueMart versions still use the legacy names.
+// HikaShop payment classes still use the legacy Joomla names.
 foreach (array('JFactory' => \Joomla\CMS\Factory::class, 'JPlugin' => \Joomla\CMS\Plugin\CMSPlugin::class,
     'JUri' => \Joomla\CMS\Uri\Uri::class, 'JText' => \Joomla\CMS\Language\Text::class,
     'JSession' => \Joomla\CMS\Session\Session::class) as $legacy => $modern) {

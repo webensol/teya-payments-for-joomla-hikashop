@@ -6,4 +6,10 @@ Release review fixed a checkout authorization-error path that incorrectly touche
 
 Native automated test baseline: Joomla 6.1.0, HikaShop Starter 6.6.0, PHP 8.4, MariaDB 11.4. These tests use a fake Teya API on an isolated Docker network; no merchant transactions are sent. They verify native checkout/callback/refund status/history, settings preservation, package enablement, defaults and uninstall protection.
 
-Before stable publication: finish real Teya sandbox acceptance (including the previously observed refund 403), publish the public repository/download/update feed, verify the final archive installation in the target shop and review listing content/screenshots. Joomla 5.4 is an allowed compatibility target but must not be advertised as tested without native validation.
+The actual installation ZIP also passed a clean native Joomla package installation and two repeated upgrades, preserving encrypted credentials, order/refund state and payment methods without duplicate extensions or methods.
+
+On 2026-10-29 the merchant reported that the real Teya sandbox acceptance checklist passed, including checkout, connection persistence and partial/full refunds. This records merchant acceptance; the automated tests remain separate simulated-provider tests and no independent live-money validation is claimed.
+
+Release cleanup adds missing GPL notices and corrects a copied CLI comment without changing payment behavior. The source checkout is kept outside generated distribution output, and preparation refuses to replace directories containing Git metadata. The ZIP, checksum and update-feed hash are rebuilt together.
+
+Version 1.0.0 remains an unpublished draft. Before stable publication, review the final archive and listing screenshots, then publish the versioned ZIP and verify the public download/update feed. Joomla 5.4 remains a compatibility target and must not be advertised as tested without native validation.

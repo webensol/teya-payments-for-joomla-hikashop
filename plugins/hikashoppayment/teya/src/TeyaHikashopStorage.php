@@ -1,4 +1,9 @@
 <?php
+/**
+ * @package Teya Payments for HikaShop
+ * @author Webensol
+ * @license GNU General Public License version 3; see LICENSE.txt
+ */
 defined('_JEXEC') or die('Restricted access');
 
 /** Checked persistence. Every financial operation locks method, then order. */

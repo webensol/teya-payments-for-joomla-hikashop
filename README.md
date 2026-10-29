@@ -8,7 +8,8 @@ Accept card payments through Teya Hosted Checkout. Developed by Webensol; requir
 - A public HTTPS shop with reachable Teya webhook URLs and outbound HTTPS access to Teya.
 - MySQL/MariaDB with transactional InnoDB HikaShop tables and advisory lock support.
 - Native automated integration verified: Joomla 6.1.0 / HikaShop Starter 6.6.0 / PHP 8.4 / MariaDB 11.4. Joomla 5.4 remains a compatibility target until its native acceptance is recorded; do not advertise it as tested.
-- Real Teya sandbox acceptance and final public hosting are still pending in this release draft.
+- Merchant-reported Teya sandbox acceptance passed on 2026-10-29 after the payment/refund checklist. This was confirmed by the merchant, separately from the automated tests; live-money transactions have not been independently verified.
+- The source repository is public. Version 1.0.0 remains an unpublished draft; its release assets become publicly downloadable only after publication.
 
 ## Install or update
 
@@ -59,6 +60,6 @@ Finish/reconcile pending refunds first. Disconnect each payment method in both t
 
 ## Support and distribution
 
-Use this public repository's issue tracker once the repository is configured. Report the plugin/Joomla/HikaShop/PHP versions, reproducible steps, HTTP status and safe response metadata. Never attach database exports, client secrets, access tokens, full order/session URLs or customer details. See `docs/TROUBLESHOOTING.md` and `docs/PRIVACY.md`.
+Use this public repository's issue tracker. Report the plugin/Joomla/HikaShop/PHP versions, reproducible steps, HTTP status and safe response metadata. Never attach database exports, client secrets, access tokens, full order/session URLs or customer details. See `docs/TROUBLESHOOTING.md` and `docs/PRIVACY.md`.
 
-License: GNU General Public License version 3; see LICENSE.txt. Teya and HikaShop names/logos identify their services. No certification or endorsement is claimed by this draft.
+License: GNU General Public License version 3; see LICENSE.txt. Teya and HikaShop names/logos identify their services. No certification or endorsement is claimed.
