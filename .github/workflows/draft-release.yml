@@ -1,0 +1,49 @@
+name: Prepare HikaShop draft release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/draft-release.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hikashop-draft-release-v1.0.0
+  cancel-in-progress: false
+
+jobs:
+  draft-release:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: v1.0.0
+      PACKAGE: pkg_teya_hikashop-1.0.0.zip
+      EXPECTED_SHA256: 74010138fa0b11b5eef05dc3f226e1262e40029984c9e883d0e31d4923bbf93f
+    steps:
+      - name: Fetch reviewed source, verify archive and create draft
+        shell: bash
+        run: |
+          set -euo pipefail
+          git init source
+          git -C source remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git -C source fetch --depth=1 origin "$GITHUB_SHA"
+          git -C source checkout --detach FETCH_HEAD
+          cd source
+          python3 tools/build-packages.py hikashop
+          printf '%s  %s\n' "$EXPECTED_SHA256" "dist/$PACKAGE" | sha256sum --check -
+          (cd dist && sha256sum "$PACKAGE" > "$PACKAGE.sha256")
+          if gh release view "$TAG" --json isDraft --jq '.isDraft' > /tmp/teya-release-state; then
+            test "$(cat /tmp/teya-release-state)" = true || { echo 'Refusing to modify a published release'; exit 1; }
+            gh release upload "$TAG" "dist/$PACKAGE" "dist/$PACKAGE.sha256" --clobber
+          else
+            gh release create "$TAG" --draft --target "$GITHUB_SHA" \
+              --title "Teya Payments for HikaShop 1.0.0" \
+              --notes-file docs/RELEASE-NOTES.md \
+              "dist/$PACKAGE" "dist/$PACKAGE.sha256"
+          fi
+          gh release view "$TAG" --json url,isDraft,assets \
+            --jq '{url:.url,isDraft:.isDraft,assets:[.assets[]|{name:.name,size:.size}]}'
