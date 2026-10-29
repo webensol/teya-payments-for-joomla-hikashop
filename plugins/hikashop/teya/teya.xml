@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension version="4.0" type="plugin" group="hikashop" method="upgrade">
+    <name>Teya Payments - HikaShop Administration</name>
+    <author>Webensol</author>
+    <license>GNU General Public License version 3</license>
+    <creationDate>2026-10-29</creationDate>
+    <version>1.0.0</version>
+    <description>Provides secure Teya onboarding, refund controls, configuration protection and connection lifecycle handling for HikaShop.</description>
+    <files>
+        <filename>LICENSE.txt</filename>
+        <filename plugin="teya">teya.php</filename>
+        <filename>index.html</filename>
+    </files>
+</extension>

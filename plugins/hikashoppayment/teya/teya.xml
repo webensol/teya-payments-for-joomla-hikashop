@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension version="4.0" type="plugin" group="hikashoppayment" method="upgrade">
+    <name>Teya Payments - Hikashop</name>
+    <author>Webensol</author>
+    <license>GNU General Public License version 3</license>
+    <creationDate>2026-10-29</creationDate>
+    <version>1.0.0</version>
+    <description>Teya Hosted Checkout payment gateway for HikaShop.</description>
+    <files>
+        <filename>LICENSE.txt</filename>
+        <filename plugin="teya">teya.php</filename>
+        <filename>index.html</filename>
+        <folder>assets</folder>
+        <folder>src</folder>
+        <folder>cli</folder>
+        <folder>language</folder>
+    </files>
+    <languages folder="language">
+        <language tag="en-GB">en-GB/en-GB.plg_hikashoppayment_teya.ini</language>
+        <language tag="en-GB">en-GB/en-GB.plg_hikashoppayment_teya.sys.ini</language>
+        <language tag="de-DE">de-DE/de-DE.plg_hikashoppayment_teya.ini</language>
+        <language tag="de-DE">de-DE/de-DE.plg_hikashoppayment_teya.sys.ini</language>
+        <language tag="hu-HU">hu-HU/hu-HU.plg_hikashoppayment_teya.ini</language>
+        <language tag="hu-HU">hu-HU/hu-HU.plg_hikashoppayment_teya.sys.ini</language>
+        <language tag="cs-CZ">cs-CZ/cs-CZ.plg_hikashoppayment_teya.ini</language>
+        <language tag="cs-CZ">cs-CZ/cs-CZ.plg_hikashoppayment_teya.sys.ini</language>
+        <language tag="sk-SK">sk-SK/sk-SK.plg_hikashoppayment_teya.ini</language>
+        <language tag="sk-SK">sk-SK/sk-SK.plg_hikashoppayment_teya.sys.ini</language>
+    </languages>
+</extension>

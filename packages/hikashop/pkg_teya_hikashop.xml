@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<extension type="package" method="upgrade" version="4.0">
+  <name>Teya Payments for HikaShop</name>
+  <packagename>teya_hikashop</packagename>
+  <version>1.0.0</version>
+  <creationDate>2026-10-29</creationDate>
+  <author>Webensol</author>
+  <license>GNU General Public License version 3</license>
+  <description>Installs the Teya payment gateway and its required companion plugin for HikaShop.</description>
+  <scriptfile>script.php</scriptfile>
+  <blockChildUninstall>true</blockChildUninstall>
+  <files folder="packages">
+    <file type="plugin" id="teya" group="hikashoppayment">plg_hikashoppayment_teya.zip</file>
+    <file type="plugin" id="teya" group="hikashop">plg_hikashop_teya.zip</file>
+  </files>
+  <updateservers>
+    <server type="extension" priority="1" name="Teya Payments for HikaShop updates">https://raw.githubusercontent.com/webensol/teya-payments-for-joomla-hikashop/main/updates/hikashop.xml</server>
+  </updateservers>
+</extension>
