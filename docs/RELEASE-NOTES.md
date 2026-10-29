@@ -1,4 +1,6 @@
-# Teya Payments for HikaShop 1.0.0 — release draft
+# Teya Payments for HikaShop 1.0.0
+
+Release date: 2026-10-29.
 
 Initial merchant-distribution package. Includes hosted checkout, test/live onboarding, signed payment callbacks, encrypted credential storage, administrator partial/full refunds, durable retries and optional CLI refund recovery. Customer payment emails default to disabled.
 
@@ -12,4 +14,4 @@ On 2026-10-29 the merchant reported that the real Teya sandbox acceptance checkl
 
 Release cleanup adds missing GPL notices and corrects a copied CLI comment without changing payment behavior. The source checkout is kept outside generated distribution output, and preparation refuses to replace directories containing Git metadata. The ZIP, checksum and update-feed hash are rebuilt together.
 
-Version 1.0.0 remains an unpublished draft. Before stable publication, review the final archive and listing screenshots, then publish the versioned ZIP and verify the public download/update feed. Joomla 5.4 remains a compatibility target and must not be advertised as tested without native validation.
+Install `pkg_teya_hikashop-1.0.0.zip` from the versioned GitHub release. The release includes a SHA-256 checksum file, and the Joomla update feed identifies the same versioned ZIP and checksum. Joomla 5.4 remains a compatibility target and must not be advertised as tested without native validation.

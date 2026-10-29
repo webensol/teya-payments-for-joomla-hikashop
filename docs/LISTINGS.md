@@ -1,10 +1,10 @@
-# Submission drafts — review before publication
+# Directory submission copy — review before submission
 
 ## Common listing copy
 
 Name: **Teya Payments for HikaShop**
 Developer: Webensol
-Version: 1.0.0 (unpublished release draft; merchant sandbox acceptance reported on 2026-10-29)
+Version: 1.0.0 (merchant sandbox acceptance reported on 2026-10-29)
 Type: Joomla installation package containing HikaShop payment and administration plugins.
 License: GNU GPL version 3. A Teya merchant account is required; payment-service costs are separate from the plugin distribution terms.
 

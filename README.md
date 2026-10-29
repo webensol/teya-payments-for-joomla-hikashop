@@ -9,7 +9,7 @@ Accept card payments through Teya Hosted Checkout. Developed by Webensol; requir
 - MySQL/MariaDB with transactional InnoDB HikaShop tables and advisory lock support.
 - Native automated integration verified: Joomla 6.1.0 / HikaShop Starter 6.6.0 / PHP 8.4 / MariaDB 11.4. Joomla 5.4 remains a compatibility target until its native acceptance is recorded; do not advertise it as tested.
 - Merchant-reported Teya sandbox acceptance passed on 2026-10-29 after the payment/refund checklist. This was confirmed by the merchant, separately from the automated tests; live-money transactions have not been independently verified.
-- The source repository is public. Version 1.0.0 remains an unpublished draft; its release assets become publicly downloadable only after publication.
+- Download the version 1.0.0 installation ZIP and SHA-256 checksum from the [GitHub release](https://github.com/webensol/teya-payments-for-joomla-hikashop/releases/tag/v1.0.0). Source code, documentation and support are available in this public repository.
 
 ## Install or update
 

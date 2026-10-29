@@ -22,4 +22,4 @@ Secrets/tokens are encrypted with a key derived from Joomla's site secret. A dat
 
 ## Updates
 
-Install the complete package over the existing version. Keep both bundled plugins enabled. The package declares the public repository's `updates/hikashop.xml` feed. Versioned ZIP downloads become public only after the GitHub release is published; draft release assets require repository access. Verify that the feed's versioned download URL works without signing in before announcing the release.
+Install the complete package over the existing version. Keep both bundled plugins enabled. The package declares the public repository's `updates/hikashop.xml` feed. Published installation ZIPs and SHA-256 checksum files are available on the versioned GitHub release pages. If Joomla cannot download an update, check that the shop can access both the raw GitHub update feed and GitHub release downloads over HTTPS.
