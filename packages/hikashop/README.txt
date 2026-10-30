@@ -8,7 +8,7 @@ Customer payment-confirmation emails default to disabled; HikaShop native status
 Update over the existing installation. Do not delete/recreate payment methods to update them.
 Disconnect both environments and resolve pending refunds before uninstalling.
 
-Version 1.0.1 is prepared for HikaShop Marketplace review. Sandbox acceptance recorded on 2026-10-29 applies to version 1.0.0.
+Version 1.0.1 is distributed as a stable GitHub release. Sandbox acceptance recorded on 2026-10-29 applies to version 1.0.0; the 1.0.1 real sandbox and marketplace retest is pending. Test your shop's payment and refund flow before enabling live payments.
 Source, merchant guide and release notes: https://github.com/webensol/teya-payments-for-joomla-hikashop
 License: GNU General Public License version 3; full terms are in LICENSE.txt.
 

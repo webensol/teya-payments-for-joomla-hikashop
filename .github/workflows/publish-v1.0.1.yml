@@ -1,0 +1,69 @@
+name: Publish Teya Payments for HikaShop v1.0.1
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: [.github/workflows/publish-v1.0.1.yml]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: hikashop-release-v1.0.1
+  cancel-in-progress: false
+
+jobs:
+  publish-v1-0-1:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      RELEASE_ID: '428821020'
+      TAG: v1.0.1
+      PACKAGE: pkg_teya_hikashop-1.0.1.zip
+      EXPECTED_SHA256: e4cd5da1ea376c13579fc9028925d055636517a52e99ebabec4ac6294bd72d09
+    steps:
+      - name: Verify final archive, replace draft assets and publish v1.0.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GH_REPO" = webensol/teya-payments-for-joomla-hikashop
+          test "$GITHUB_REF" = refs/heads/main
+          git init source
+          git -C source remote add origin "https://github.com/${GITHUB_REPOSITORY}.git"
+          git -C source fetch --depth=1 origin "$GITHUB_SHA"
+          git -C source checkout --detach FETCH_HEAD
+          cd source
+          python3 tools/build-packages.py hikashop
+          printf '%s  %s\n' "$EXPECTED_SHA256" "dist/$PACKAGE" | sha256sum --check -
+          (cd dist && sha256sum "$PACKAGE" > "$PACKAGE.sha256")
+          gh api "repos/$GH_REPO/releases/$RELEASE_ID" > /tmp/teya-release-before.json
+          python3 - <<'PY'
+          import json, os
+          release=json.load(open('/tmp/teya-release-before.json'))
+          assert release['tag_name']==os.environ['TAG'], 'Unexpected release tag'
+          assert release['draft'] is True, 'Refusing to modify a published release'
+          PY
+          gh release edit "$TAG" --draft --prerelease=false --target "$GITHUB_SHA" \
+            --title "Teya Payments for HikaShop 1.0.1" --notes-file docs/RELEASE-NOTES.md
+          gh release upload "$TAG" "dist/$PACKAGE" "dist/$PACKAGE.sha256" --clobber
+          gh api "repos/$GH_REPO/releases/$RELEASE_ID" > /tmp/teya-release-verified.json
+          python3 - <<'PY'
+          import hashlib, json, os
+          from pathlib import Path
+          release=json.load(open('/tmp/teya-release-verified.json'))
+          assert release['draft'] is True and release['prerelease'] is False
+          assert release['target_commitish']==os.environ['GITHUB_SHA']
+          assert release['body'].strip()==Path('docs/RELEASE-NOTES.md').read_text().strip()
+          assets={asset['name']:asset for asset in release['assets']}
+          for name in (os.environ['PACKAGE'],os.environ['PACKAGE']+'.sha256'):
+              expected=hashlib.sha256(Path('dist',name).read_bytes()).hexdigest()
+              assert assets[name]['digest']=='sha256:'+expected, 'Uploaded asset digest mismatch'
+          PY
+          # The user explicitly authorized stable publication of v1.0.1.
+          gh release edit "$TAG" --draft=false --prerelease=false --latest
+          test "$(gh release view "$TAG" --json isDraft --jq '.isDraft')" = false
+          gh api "repos/$GH_REPO/releases/$RELEASE_ID" \
+            --jq '{url:.html_url,draft:.draft,prerelease:.prerelease,tag:.tag_name,assets:[.assets[]|{name:.name,size:.size,digest:.digest}]}'
