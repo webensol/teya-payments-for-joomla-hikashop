@@ -7,14 +7,14 @@ Accept card payments through Teya Hosted Checkout. Developed by Webensol; requir
 - Joomla 5.4 or Joomla 6, PHP 8.2+ with OpenSSL and cURL, HikaShop 6.6.0+.
 - A public HTTPS shop with reachable Teya webhook URLs and outbound HTTPS access to Teya.
 - MySQL/MariaDB with transactional InnoDB HikaShop tables and advisory lock support.
-- Native automated integration verified: Joomla 6.1.0 / HikaShop Starter 6.6.0 / PHP 8.4 / MariaDB 11.4. Joomla 5.4 remains a compatibility target until its native acceptance is recorded; do not advertise it as tested.
-- Merchant-reported Teya sandbox acceptance passed on 2026-10-29 after the payment/refund checklist. This was confirmed by the merchant, separately from the automated tests; live-money transactions have not been independently verified.
-- Download the version 1.0.0 installation ZIP and SHA-256 checksum from the [GitHub release](https://github.com/webensol/teya-payments-for-joomla-hikashop/releases/tag/v1.0.0). Source code, documentation and support are available in this public repository.
+- Native integration verified for the 1.0.1 review build: Joomla 6.1.0 / HikaShop Starter 6.6.0 / PHP 8.5.9, and Joomla 5.4.8 / HikaShop Starter 6.6.0 / PHP 8.3.35, with MariaDB 11.4.
+- Merchant-reported Teya sandbox acceptance for 1.0.0 passed on 2026-10-29. Version 1.0.1 awaits the marketplace team's real sandbox retest. Automated tests use a simulated provider; no independent live-money validation is claimed.
+- This source prepares version 1.0.1 for HikaShop Marketplace review. The current public stable release is [1.0.0](https://github.com/webensol/teya-payments-for-joomla-hikashop/releases/tag/v1.0.0). The review ZIP can be shared as an attachment; GitHub draft assets require repository access.
 
 ## Install or update
 
 1. Back up the database and Joomla configuration, including its site secret.
-2. In Joomla, open System → Install → Extensions and upload `pkg_teya_hikashop-1.0.0.zip`.
+2. In Joomla, open System → Install → Extensions and upload `pkg_teya_hikashop-1.0.1.zip`.
 3. Keep both bundled Teya plugins enabled. Do not install their inner ZIPs separately.
 4. In HikaShop payment methods, create a Teya method and save it before connecting.
 5. Select Test mode and save. Click Connect to Teya, finish setup in the new window, and wait for the original settings page to confirm the connection.
@@ -27,6 +27,10 @@ Update by uploading the full package over the installation. Do not uninstall/rec
 ## Payment settings
 
 The plugin supports redirect or Teya success-page behavior, detailed or aggregate line items, merchant success emails and test/live connections. `Send customer payment email` defaults to No. Existing methods explicitly saved as Yes keep their choice. This setting controls the Teya API email request; HikaShop's native order-status emails have their own configuration.
+
+`Send HikaShop payment notification to merchant` is a separate, optional setting, disabled by default. When enabled, a verified successful payment calls HikaShop's native payment-notification email using its configured recipients and template. Duplicate callbacks do not send it again. This does not change Teya's customer/merchant email settings or HikaShop's customer order-status emails.
+
+All payment settings, connection feedback, refund controls and safe API errors use Joomla language strings in English, Hungarian, Czech, Slovak and German.
 
 Use the order currency. For HUF, configure whole-forint final order totals: the gateway rejects fractional HUF rather than silently charging a different total. Actual accepted currencies and card brands depend on the merchant's Teya account.
 

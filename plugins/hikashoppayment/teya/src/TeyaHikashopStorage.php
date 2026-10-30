@@ -82,6 +82,11 @@ class TeyaHikashopStorage
             $row->_raw = $raw;
         } catch (Throwable $e) { $this->db->transactionRollback(); throw $e; }
     }
+    public function notifyMerchant($order, $status)
+    {
+        // Uses HikaShop's configured payment-notification recipients and native email template.
+        hikashop_get('class.order')->sendPaymentNotification((int) $order->order_id, 'teya', $status, true);
+    }
     public function findSession($session, $methodId)
     {
         if (!preg_match('/^[a-zA-Z0-9_-]{1,128}$/D', $session)) { throw new RuntimeException('Invalid session identifier.'); }

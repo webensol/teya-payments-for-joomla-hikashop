@@ -6,6 +6,8 @@
  */
 defined('_JEXEC') or defined('ABSPATH') or die('Restricted access');
 
+require_once __DIR__ . '/TeyaHikashopLanguage.php';
+
 final class TeyaHikashopCheckoutBuilder
 {
     public static function build($order, $params, array $urls)
@@ -105,15 +107,16 @@ final class TeyaHikashopCheckoutBuilder
 
     private static function lineItems($order, $amount, $currency, $singleLine)
     {
-        if ($singleLine || empty($order->products)) {
+        $products = !empty($order->cart->products) ? $order->cart->products : ($order->products ?? array());
+        if ($singleLine || empty($products)) {
             return array(array(
-                'description' => TeyaHikashopUtils::truncateDescription('Order ' . (isset($order->order_number) ? $order->order_number : $order->order_id)),
+                'description' => TeyaHikashopUtils::truncateDescription(TeyaHikashopLanguage::text('ORDER_LINE', isset($order->order_number) ? $order->order_number : $order->order_id)),
                 'quantity' => 1,
                 'unit_price' => TeyaHikashopUtils::toMinorUnits($amount, $currency),
             ));
         }
         $items = array();
-        foreach ($order->products as $product) {
+        foreach ($products as $product) {
             $quantity = isset($product->order_product_quantity) ? (int) $product->order_product_quantity : (isset($product->cart_product_quantity) ? (int) $product->cart_product_quantity : 1);
             if ($quantity < 1) {
                 continue;
@@ -131,7 +134,7 @@ final class TeyaHikashopCheckoutBuilder
         }
         if (empty($items)) {
             $items[] = array(
-                'description' => TeyaHikashopUtils::truncateDescription('Order ' . (isset($order->order_number) ? $order->order_number : $order->order_id)),
+                'description' => TeyaHikashopUtils::truncateDescription(TeyaHikashopLanguage::text('ORDER_LINE', isset($order->order_number) ? $order->order_number : $order->order_id)),
                 'quantity' => 1,
                 'unit_price' => TeyaHikashopUtils::toMinorUnits($amount, $currency),
             );
@@ -140,7 +143,7 @@ final class TeyaHikashopCheckoutBuilder
             return $item['quantity'] * $item['unit_price'];
         }, $items));
         if ($difference !== 0) {
-            $items[] = array('description' => 'Shipping, fees, discounts and rounding', 'quantity' => 1, 'unit_price' => $difference);
+            $items[] = array('description' => TeyaHikashopLanguage::text('ORDER_ADJUSTMENTS'), 'quantity' => 1, 'unit_price' => $difference);
         }
         return $items;
     }

@@ -6,6 +6,8 @@
  */
 defined('_JEXEC') or die('Restricted access');
 
+require_once __DIR__ . '/TeyaHikashopLanguage.php';
+
 /** Financial operations have injectable persistence and transport for failure testing. */
 class TeyaHikashopGateway
 {
@@ -142,6 +144,11 @@ class TeyaHikashopGateway
             if ($outcome === 'success') { $params->teya_transaction_id=$data['transaction_id']; }
             $status=$outcome === 'success' ? ($method->payment_params->verified_status ?? 'confirmed') : ($method->payment_params->invalid_status ?? 'cancelled');
             $this->store->saveOrder($order,$status,'Teya payment '.$outcome.'. Session: '.$session);
+            if ($outcome === 'success' && !empty($method->payment_params->hikashop_merchant_email)) {
+                // Payment state is committed first; a duplicate callback never sends this email again.
+                try { $this->store->notifyMerchant($order, $status); }
+                catch (Throwable $exception) { error_log('[Teya HikaShop] Merchant notification failed: ' . get_class($exception)); }
+            }
         });
     }
     public function beginConnection($methodId,$environment)
@@ -227,7 +234,7 @@ class TeyaHikashopGateway
         if (self::outcome($payload) !== 'success' || ($params->teya_transaction_id ?? '') !== ($payload['data']['transaction_id'] ?? null)) { throw new RuntimeException('A verified successful payment is required.'); }
         $paid=$payload['data']['amount'];
         $state=self::ledger($params);
-        return array('currency'=>$paid['currency'],'remaining'=>(int) $paid['value']-array_sum(array_column($state['refunds'],'amount')),'pending'=>!empty($state['pending']), 'blocked'=>!empty($state['pending']['blocked']), 'retry_at'=>(int) ($state['pending']['next_attempt'] ?? 0), 'message'=>!empty($state['pending']['blocked']) ? 'Teya refused authorization for this refund. Resolve the merchant/API permissions before retrying the same refund.' : (!empty($state['pending']) ? 'Refund outcome is not confirmed. Retry uses the existing refund reference.' : ''));
+        return array('currency'=>$paid['currency'],'remaining'=>(int) $paid['value']-array_sum(array_column($state['refunds'],'amount')),'pending'=>!empty($state['pending']), 'blocked'=>!empty($state['pending']['blocked']), 'retry_at'=>(int) ($state['pending']['next_attempt'] ?? 0), 'message'=>!empty($state['pending']['blocked']) ? TeyaHikashopLanguage::text('REFUND_BLOCKED') : (!empty($state['pending']) ? TeyaHikashopLanguage::text('REFUND_PENDING') : ''));
     }
     public function refund($methodId,$orderId,$amount,$requestKey,$retry=false,$resumeBlocked=false)
     {

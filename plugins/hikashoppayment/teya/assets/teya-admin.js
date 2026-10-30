@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const container = document.querySelectorAll('.teya-onboarding-container')[0];
+  const messages = JSON.parse(container?.dataset.messages || '{}');
+  const text = key => messages[key] || key;
   const mode = () => {
     const fields = [...document.querySelectorAll('input,select')].filter(el => (el.name || '').includes('sandbox'));
     const value = fields.find(el => el.type === 'radio' && el.checked) || fields.find(el => el.tagName === 'SELECT') || fields.find(el => el.type === 'checkbox') || fields.find(el => el.type === 'hidden');
@@ -11,12 +14,14 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('change', mode); mode();
   async function request(url, body) {
     const response = await fetch(url, {credentials:'same-origin', cache:'no-store', method:body ? 'POST' : 'GET', body});
-    const data = await response.json();
-    if (!response.ok || data.error) throw new Error(data.error || 'Request failed.');
+    let data;
+    try { data = await response.json(); }
+    catch (error) { throw new Error(text('REQUEST_FAILED')); }
+    if (!response.ok || data.error) throw new Error(data.error || text('REQUEST_FAILED'));
     return data;
   }
   function display(option, state) {
-    if (state.environment !== option.dataset.teyaMode) throw new Error('Connection status environment mismatch. Refresh the settings.');
+    if (state.environment !== option.dataset.teyaMode) throw new Error(text('ENVIRONMENT_MISMATCH'));
     const connected = state.connected === true;
     const label = option.querySelector('.teya-environment-status');
     label.textContent = connected ? option.dataset.connectedLabel : option.dataset.disconnectedLabel;
@@ -47,10 +52,10 @@ document.addEventListener('DOMContentLoaded', () => {
           const body = new URLSearchParams(); body.set(status.csrf_token,'1');
           const result = await request(button.href,body);
           if (!connect) { display(option,result); output.textContent = ''; delete button.dataset.busy; return; }
-          output.textContent = 'Waiting for Teya connection…';
+          output.textContent = text('WAITING_CONNECTION');
           if (popup) popup.location.href = result.url;
           else {
-            const link = document.createElement('a'); link.href = result.url; link.target = '_blank'; link.rel = 'noopener'; link.textContent = ' Open Teya to continue.'; output.appendChild(link);
+            const link = document.createElement('a'); link.href = result.url; link.target = '_blank'; link.rel = 'noopener'; link.textContent = ' ' + text('OPEN_TEYA'); output.appendChild(link);
           }
           const end = Date.now() + 30 * 60 * 1000;
           const poll = async () => {
@@ -60,11 +65,11 @@ document.addEventListener('DOMContentLoaded', () => {
               if (current !== generation) { delete button.dataset.busy; return; }
               if (next.connected && next.completed_attempt === result.attempt) {
                 display(option,next);
-                output.textContent = 'Connection saved for ' + (option.dataset.teyaMode === 'test' ? 'TEST' : 'LIVE') + '. Save the form if you changed the checkout environment.';
+                output.textContent = text('CONNECTION_SAVED').replace('%s', text(option.dataset.teyaMode === 'test' ? 'ENV_TEST' : 'ENV_LIVE'));
                 delete button.dataset.busy; return;
               }
               if (Date.now() < end) window.setTimeout(poll,3000);
-              else { output.textContent = 'Connection expired. Start again.'; delete button.dataset.busy; }
+              else { output.textContent = text('CONNECTION_EXPIRED'); delete button.dataset.busy; }
             } catch (error) { output.textContent = error.message; delete button.dataset.busy; }
           };
           window.setTimeout(poll,2000);

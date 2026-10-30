@@ -4,7 +4,7 @@
 
 Name: **Teya Payments for HikaShop**
 Developer: Webensol
-Version: 1.0.0 (merchant sandbox acceptance reported on 2026-10-29)
+Version: 1.0.1 (marketplace review; public stable release remains 1.0.0)
 Type: Joomla installation package containing HikaShop payment and administration plugins.
 License: GNU GPL version 3. A Teya merchant account is required; payment-service costs are separate from the plugin distribution terms.
 
@@ -19,13 +19,15 @@ Features:
 - HUF whole-forint validation and reconciled checkout totals.
 - Customer payment-confirmation email disabled by default.
 - One upload installs both required plugins.
+- Native HikaShop merchant notification email available as an opt-in setting.
+- Translated settings, connection feedback, refund controls and API errors in five languages.
 
 Do not claim recurring payments, separate authorization/capture, customer-executed refunds, Teya certification, verified live-money behavior, or broader compatibility than the test record supports.
 
 ## Download channel
 
 Public repository URL: https://github.com/webensol/teya-payments-for-joomla-hikashop
-Versioned installation ZIP: https://github.com/webensol/teya-payments-for-joomla-hikashop/releases/download/v1.0.0/pkg_teya_hikashop-1.0.0.zip
+Versioned installation ZIP: https://github.com/webensol/teya-payments-for-joomla-hikashop/releases/download/v1.0.1/pkg_teya_hikashop-1.0.1.zip
 Documentation: https://github.com/webensol/teya-payments-for-joomla-hikashop#readme
 Support: https://github.com/webensol/teya-payments-for-joomla-hikashop/issues
 Update feed: https://raw.githubusercontent.com/webensol/teya-payments-for-joomla-hikashop/main/updates/hikashop.xml

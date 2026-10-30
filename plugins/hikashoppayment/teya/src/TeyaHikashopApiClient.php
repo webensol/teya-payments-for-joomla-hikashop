@@ -6,6 +6,8 @@
  */
 defined('_JEXEC') or defined('ABSPATH') or die('Restricted access');
 
+require_once __DIR__ . '/TeyaHikashopLanguage.php';
+
 class TeyaHikashopApiException extends RuntimeException
 {
     private $statusCode;
@@ -65,7 +67,7 @@ final class TeyaHikashopApiClient
         ));
         $response = $this->request('POST', TeyaHikashopUtils::identityTokenUrl($environment), array('Content-Type: application/x-www-form-urlencoded'), $body);
         if (empty($response['body']['access_token'])) {
-            throw new RuntimeException('No Teya access token received.');
+            throw new RuntimeException(TeyaHikashopLanguage::text('API_TOKEN_ERROR'));
         }
         return $response['body'];
     }
@@ -75,7 +77,7 @@ final class TeyaHikashopApiClient
         $response = $this->request('GET', TeyaHikashopUtils::registrationPublicKeyUrl($environment), array('User-Agent: Teya-Signature-Validator/1.0'), null, false);
         $publicKey = trim((string) $response['raw']);
         if ($publicKey === '') {
-            throw new RuntimeException('Teya registration public key was empty.');
+            throw new RuntimeException(TeyaHikashopLanguage::text('API_KEY_ERROR'));
         }
         return $publicKey;
     }
@@ -97,7 +99,7 @@ final class TeyaHikashopApiClient
         $response['body']['_retry_after'] = $response['retry_after'] ?? 0;
         $teyaCode = isset($response['body']['code']) ? $response['body']['code'] : null;
         if ($response['status'] >= 400 && !in_array($teyaCode, $allowedErrorCodes, true)) {
-            $message = isset($response['body']['description']) ? $response['body']['description'] : 'Unknown Teya API error.';
+            $message = TeyaHikashopLanguage::text('API_ERROR', $response['status']);
             throw new TeyaHikashopApiException($message, $response['status'], is_array($response['body']) ? $response['body'] : array());
         }
         $body = is_array($response['body']) ? $response['body'] : array();
@@ -131,12 +133,10 @@ final class TeyaHikashopApiClient
             }
             $raw = curl_exec($ch);
             if ($raw === false) {
-                $error = curl_error($ch);
-                curl_close($ch);
-                throw new RuntimeException('Teya API request failed: ' . $error);
+                throw new RuntimeException(TeyaHikashopLanguage::text('API_NETWORK_ERROR'));
             }
             $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-            curl_close($ch);
+
         } else {
             $context = stream_context_create(array('http' => array(
                 'method' => $method,
@@ -148,11 +148,12 @@ final class TeyaHikashopApiClient
             )));
             $raw = file_get_contents($url, false, $context);
             if ($raw === false) {
-                throw new RuntimeException('Teya API request failed.');
+                throw new RuntimeException(TeyaHikashopLanguage::text('API_NETWORK_ERROR'));
             }
-            foreach ($http_response_header ?? array() as $line) { self::captureDiagnosticHeader($diagnosticHeaders, $line); if (stripos($line, 'Retry-After:') === 0) { $retryAfter = trim(substr($line, 12)); } }
+            $responseHeaders = function_exists('http_get_last_response_headers') ? http_get_last_response_headers() : (get_defined_vars()['http_response_header'] ?? array());
+            foreach ($responseHeaders ?? array() as $line) { self::captureDiagnosticHeader($diagnosticHeaders, $line); if (stripos($line, 'Retry-After:') === 0) { $retryAfter = trim(substr($line, 12)); } }
             $status = 200;
-            if (isset($http_response_header[0]) && preg_match('#\s(\d{3})\s#', $http_response_header[0], $match)) {
+            if (isset($responseHeaders[0]) && preg_match('#\s(\d{3})\s#', $responseHeaders[0], $match)) {
                 $status = (int) $match[1];
             }
         }

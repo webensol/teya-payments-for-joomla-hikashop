@@ -23,3 +23,11 @@ Secrets/tokens are encrypted with a key derived from Joomla's site secret. A dat
 ## Updates
 
 Install the complete package over the existing version. Keep both bundled plugins enabled. The package declares the public repository's `updates/hikashop.xml` feed. Published installation ZIPs and SHA-256 checksum files are available on the versioned GitHub release pages. If Joomla cannot download an update, check that the shop can access both the raw GitHub update feed and GitHub release downloads over HTTPS.
+
+## PHP 8.5 and version 1.0.1
+
+Version 1.0.1 removes plugin cURL-close, implicit-nullable and stream-header deprecations that can corrupt administrator JSON when notices are displayed. Reinstall the full review package over the previous version; keep the same payment methods and credentials. Browser failures show a localized generic message. Server logs retain safe status/request-ID metadata; never publish raw tokens or provider bodies.
+
+## Native merchant notification email
+
+Enable Send HikaShop payment notification to merchant in the Teya payment method and configure HikaShop's payment-notification recipient address. It uses HikaShop's mail template and transport. The setting defaults off and is separate from Teya's own email options. A mail-delivery problem does not roll back or repeat a confirmed payment; check the shop's mail configuration.

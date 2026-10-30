@@ -65,32 +65,39 @@ class plgHikashopTeya extends JPlugin
             } else { throw new RuntimeException('Unknown Teya action.'); }
             $code=200;
         } catch (Throwable $e) {
-            $code=$e->getCode()===403 ? 403 : 400;
+            $code=(!($e instanceof TeyaHikashopApiException) && $e->getCode()===403) ? 403 : 400;
             $this->writeLog('Teya administrator operation failed: '.get_class($e).'; code='.(int)$e->getCode());
-            $result=array('error'=>$code===403 ? 'Administrator permission or a valid session token is required.' : 'The Teya operation could not be completed. Reload the order or payment method to review its saved state.');
+            $result=array('error'=>$e instanceof TeyaHikashopApiException ? TeyaHikashopLanguage::text('API_ERROR', $e->getStatusCode()) : TeyaHikashopLanguage::text($code===403 ? 'ADMIN_AUTH_ERROR' : 'ADMIN_ERROR'));
         }
         http_response_code($code); header('Content-Type: application/json'); header('Cache-Control: no-store');
         echo json_encode($result,JSON_THROW_ON_ERROR); $app->close();
     }
-    public function onAfterOrderProductsListingDisplay(&$order,$location)
+    public function onAfterOrderProductsListingDisplay(&$order, $location)
     {
-        if (!in_array($location,array('order_back_show','order_back_form'),true) || !self::canManage()
-            || ($order->order_payment_method ?? '')!=='teya') { return; }
+        if (!in_array($location, array('order_back_show', 'order_back_form'), true) || !self::canManage()
+            || ($order->order_payment_method ?? '') !== 'teya') { return; }
         try {
-            $fresh=(new TeyaHikashopStorage())->order($order->order_id);
-            $balance=TeyaHikashopGateway::balance($fresh);
-            $state=TeyaHikashopGateway::ledger($fresh->order_payment_params);
-            $amount=$balance['remaining']/TeyaHikashopUtils::toMinorUnits(1,$balance['currency']);
-            $key=$state['pending']['key'] ?? bin2hex(random_bytes(16));
-            $url=rtrim(JUri::root(),'/').'/administrator/index.php?option=com_ajax&group=hikashop&plugin=teya&format=raw&notif_id='.(int) $fresh->order_payment_id;
-            $escape=function ($v) { return htmlspecialchars((string) $v,ENT_QUOTES,'UTF-8'); };
-            JFactory::getApplication()->getDocument()->addScript(rtrim(JUri::root(),'/').'/plugins/hikashoppayment/teya/assets/teya-refund.js?v='.hash_file('sha256',JPATH_SITE.'/plugins/hikashoppayment/teya/assets/teya-refund.js'));
-            echo '<div class="teya-refund-panel card card-body" data-url="'.$escape($url).'" data-token="'.$escape(\Joomla\CMS\Session\Session::getFormToken()).'" data-order="'.(int) $fresh->order_id.'" data-key="'.$escape($key).'">';
-            echo '<h3>Teya refunds</h3><p>Remaining refundable: '.$escape($amount.' '.$balance['currency']).'</p>';
-            if ($balance['pending']) { echo '<p>'.$escape($balance['message']).'</p>'.($balance['blocked'] ? '<p>Automatic retries are paused. Restore access before retrying.</p>' : '<p>Next retry: '.$escape($balance['retry_at']>time() ? gmdate('Y-m-d H:i:s',$balance['retry_at']).' UTC' : 'available now').'. Retrying may process the refund.</p>').'<button type="button" class="btn btn-secondary" data-action="refund_retry">Retry existing refund</button>'; }
-            elseif ($balance['remaining']>0) { echo '<label>Refund amount <input class="form-control teya-refund-amount" inputmode="decimal" value="'.$escape($amount).'"></label><button type="button" class="btn btn-primary" data-action="refund">Refund through Teya</button>'; }
+            $fresh = (new TeyaHikashopStorage())->order($order->order_id);
+            $balance = TeyaHikashopGateway::balance($fresh);
+            $state = TeyaHikashopGateway::ledger($fresh->order_payment_params);
+            $amount = $balance['remaining'] / TeyaHikashopUtils::toMinorUnits(1, $balance['currency']);
+            $key = $state['pending']['key'] ?? bin2hex(random_bytes(16));
+            $url = rtrim(JUri::root(), '/') . '/administrator/index.php?option=com_ajax&group=hikashop&plugin=teya&format=raw&notif_id=' . (int) $fresh->order_payment_id;
+            $escape = function ($value) { return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8'); };
+            JFactory::getApplication()->getDocument()->addScript(rtrim(JUri::root(), '/') . '/plugins/hikashoppayment/teya/assets/teya-refund.js?v=' . hash_file('sha256', JPATH_SITE . '/plugins/hikashoppayment/teya/assets/teya-refund.js'));
+            $messages = TeyaHikashopLanguage::messages(array('REFUND_CONFIRM', 'REFUND_CONFIRM_RETRY', 'REFUND_ERROR', 'REFUND_PENDING', 'REFUND_CONFIRMED', 'REFUND_REFRESH'));
+            echo '<div class="teya-refund-panel card card-body" data-messages="' . $messages . '" data-url="' . $escape($url) . '" data-token="' . $escape(\Joomla\CMS\Session\Session::getFormToken()) . '" data-order="' . (int) $fresh->order_id . '" data-key="' . $escape($key) . '">';
+            echo '<h3>' . $escape(TeyaHikashopLanguage::text('REFUND_TITLE')) . '</h3><p>' . $escape(TeyaHikashopLanguage::text('REFUND_REMAINING', $amount, $balance['currency'])) . '</p>';
+            if ($balance['pending']) {
+                echo '<p>' . $escape($balance['message']) . '</p>';
+                $retryAt = $balance['retry_at'] > time() ? gmdate('Y-m-d H:i:s', $balance['retry_at']) . ' UTC' : TeyaHikashopLanguage::text('REFUND_AVAILABLE_NOW');
+                echo '<p>' . $escape(TeyaHikashopLanguage::text($balance['blocked'] ? 'REFUND_PAUSED' : 'REFUND_NEXT_RETRY', $retryAt)) . '</p>';
+                echo '<button type="button" class="btn btn-secondary" data-action="refund_retry">' . $escape(TeyaHikashopLanguage::text('REFUND_RETRY')) . '</button>';
+            } elseif ($balance['remaining'] > 0) {
+                echo '<label>' . $escape(TeyaHikashopLanguage::text('REFUND_AMOUNT')) . ' <input class="form-control teya-refund-amount" inputmode="decimal" value="' . $escape($amount) . '"></label><button type="button" class="btn btn-primary" data-action="refund">' . $escape(TeyaHikashopLanguage::text('REFUND_SEND')) . '</button>';
+            }
             echo '<p role="status" class="teya-refund-result"></p></div>';
-        } catch (Throwable $e) { /* No executable refund controls without verified payment evidence. */ }
+        } catch (Throwable $exception) { /* No executable refund controls without verified payment evidence. */ }
     }
     public function onBeforeHikaPluginCreate($type,&$element,&$do)
     {
@@ -117,7 +124,7 @@ class plgHikashopTeya extends JPlugin
                 unset($params->$key); if (isset($stored->$key)) { $params->$key=$stored->$key; }
             }
             $element->payment_params=TeyaHikashopCredentials::protect($params);
-        } catch (Throwable $e) { $do=false; $this->releaseSaveLock($id); JFactory::getApplication()->enqueueMessage('The Teya settings could not be saved safely. Reload and retry.','error'); }
+        } catch (Throwable $e) { $do=false; $this->releaseSaveLock($id); JFactory::getApplication()->enqueueMessage(TeyaHikashopLanguage::text('SAVE_ERROR'),'error'); }
     }
     private function releaseSaveLock($id)
     {
@@ -145,7 +152,7 @@ class plgHikashopTeya extends JPlugin
                 foreach (array('test','live') as $environment) { $this->gateway()->disconnect((int) $id,$environment); }
             } catch (Exception $exception) {
                 $do = false;
-                $message = 'Teya could not safely disconnect this payment method. Resolve pending refunds and connection errors before deleting it.';
+                $message = TeyaHikashopLanguage::text('DELETE_ERROR');
                 $this->writeLog($message);
                 $app = JFactory::getApplication();
                 if (method_exists($app, 'enqueueMessage')) {
@@ -170,13 +177,13 @@ class plgHikashopTeya extends JPlugin
             || ($extension->type==='plugin' && $extension->element==='teya' && in_array($extension->folder,array('hikashop','hikashoppayment'),true)))) { return; }
         if (!in_array($db->getPrefix().'hikashop_payment',$db->getTableList(),true)) { return; }
         $store=new TeyaHikashopStorage($db);
-        if ($store->pending()) { throw new RuntimeException('Resolve pending Teya refunds before uninstalling the package.'); }
+        if ($store->pending()) { throw new RuntimeException(TeyaHikashopLanguage::text('UNINSTALL_PENDING')); }
         $db->setQuery('SELECT payment_params FROM #__hikashop_payment WHERE payment_type='.$db->quote('teya'));
         foreach ($db->loadColumn() as $raw) {
             $params=TeyaHikashopStorage::params($raw);
             foreach (array('test','live') as $environment) {
                 if (TeyaHikashopCredentials::isConnected($params,$environment)) {
-                    throw new RuntimeException('Disconnect every Teya payment method in both environments before uninstalling the package.');
+                    throw new RuntimeException(TeyaHikashopLanguage::text('UNINSTALL_CONNECTED'));
                 }
             }
         }
@@ -199,61 +206,6 @@ class plgHikashopTeya extends JPlugin
             $method->payment_params = new stdClass();
         }
         return $method;
-    }
-
-    private function disconnectPaymentMethodRegistrations($method)
-    {
-        $params = $method->payment_params;
-        $changed = false;
-        foreach (array(TeyaHikashopUtils::ENV_TEST, TeyaHikashopUtils::ENV_LIVE) as $environment) {
-            if (!TeyaHikashopCredentials::isConnected($params, $environment)) {
-                continue;
-            }
-            $this->disconnectRegistration((int) $method->payment_id, $params, $environment);
-            $changed = true;
-        }
-        if ($changed) {
-            $this->savePaymentParams((int) $method->payment_id, $params);
-        }
-    }
-
-    private function disconnectRegistration($methodId, &$params, $environment)
-    {
-        $environment = TeyaHikashopUtils::normalizeEnvironment($environment);
-        $this->apiClient($params)->deleteCurrentRegistration($this->getAccessToken($methodId, $params, $environment), $environment);
-        $prefix = $environment === TeyaHikashopUtils::ENV_TEST ? 'test_' : '';
-        foreach (array('client_id', 'client_secret', 'payment_webhook_public_key', 'access_token', 'access_token_expires_at') as $key) {
-            $params->{$prefix . $key} = '';
-        }
-    }
-
-    private function getAccessToken($methodId, &$params, $environment)
-    {
-        $environment = TeyaHikashopUtils::normalizeEnvironment($environment);
-        $prefix = $environment === TeyaHikashopUtils::ENV_TEST ? 'test_' : '';
-        $tokenKey = $prefix . 'access_token';
-        $expiresKey = $prefix . 'access_token_expires_at';
-        if (!empty($params->$tokenKey) && !empty($params->$expiresKey) && (int) $params->$expiresKey > time()) {
-            return TeyaHikashopCredentials::value($params, 'access_token', $environment);
-        }
-        $clientId = TeyaHikashopCredentials::value($params, 'client_id', $environment);
-        $clientSecret = TeyaHikashopCredentials::value($params, 'client_secret', $environment);
-        if ($clientId === '' || $clientSecret === '') {
-            throw new RuntimeException('Teya client credentials are not configured.');
-        }
-        $token = $this->apiClient($params)->requestAccessToken($clientId, $clientSecret, $environment);
-        $params->$tokenKey = $token['access_token'];
-        $params->$expiresKey = time() + max(0, ((int) @$token['expires_in']) - 60);
-        $this->savePaymentParams($methodId, $params);
-        return $token['access_token'];
-    }
-
-    private function savePaymentParams($methodId, $params)
-    {
-        $db = JFactory::getDBO();
-        $query = 'UPDATE ' . hikashop_table('payment') . ' SET payment_params = ' . $db->Quote(serialize(TeyaHikashopCredentials::protect($params))) . ' WHERE payment_id = ' . (int) $methodId . ' AND payment_type = ' . $db->Quote('teya');
-        $db->setQuery($query);
-        $db->execute();
     }
 
     private function apiClient($params)

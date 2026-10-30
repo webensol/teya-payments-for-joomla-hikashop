@@ -2,8 +2,8 @@
 <extension type="package" method="upgrade" version="4.0">
   <name>Teya Payments for HikaShop</name>
   <packagename>teya_hikashop</packagename>
-  <version>1.0.0</version>
-  <creationDate>2026-10-29</creationDate>
+  <version>1.0.1</version>
+  <creationDate>2026-10-30</creationDate>
   <author>Webensol</author>
   <license>GNU General Public License version 3</license>
   <description>Installs the Teya payment gateway and its required companion plugin for HikaShop.</description>

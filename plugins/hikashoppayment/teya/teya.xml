@@ -3,8 +3,8 @@
     <name>Teya Payments - Hikashop</name>
     <author>Webensol</author>
     <license>GNU General Public License version 3</license>
-    <creationDate>2026-10-29</creationDate>
-    <version>1.0.0</version>
+    <creationDate>2026-10-30</creationDate>
+    <version>1.0.1</version>
     <description>Teya Hosted Checkout payment gateway for HikaShop.</description>
     <files>
         <filename>LICENSE.txt</filename>
