@@ -25,20 +25,22 @@ class TeyaHikashopGateway
             });
         });
     }
-    private function token($method,$environment,$force=false)
+    private function token($method,$environment,$force=false,$sessionRead=false)
     {
         $params=$method->payment_params;
         $prefix=$environment === 'test' ? 'test_' : '';
-        if (!$force && (int) ($params->{$prefix.'access_token_expires_at'} ?? 0) > time()) {
+        if (!$force && (int) ($params->{$prefix.'access_token_expires_at'} ?? 0) > time()
+            && (!$sessionRead || ($params->{$prefix.'access_token_scopes'} ?? '') === TeyaHikashopApiClient::SESSION_READ_SCOPE)) {
             $token=TeyaHikashopCredentials::value($params,'access_token',$environment);
             if ($token !== '') { return $token; }
         }
         $id=TeyaHikashopCredentials::value($params,'client_id',$environment);
         $secret=TeyaHikashopCredentials::value($params,'client_secret',$environment);
         if ($id === '' || $secret === '') { throw new RuntimeException('Teya is not connected for this payment environment.'); }
-        $token=call_user_func($this->factory,$params)->requestAccessToken($id,$secret,$environment);
+        $token=call_user_func($this->factory,$params)->requestAccessToken($id,$secret,$environment,$sessionRead);
         if (!is_string($token['access_token'] ?? null) || $token['access_token'] === '') { throw new RuntimeException('Invalid OAuth response.'); }
         $params->{$prefix.'access_token'}=$token['access_token'];
+        $params->{$prefix.'access_token_scopes'}=$sessionRead ? TeyaHikashopApiClient::SESSION_READ_SCOPE : '';
         $params->{$prefix.'access_token_expires_at'}=time()+max(0,(int) ($token['expires_in'] ?? 0)-60);
         $this->store->saveMethod($method);
         return $token['access_token'];
@@ -128,28 +130,88 @@ class TeyaHikashopGateway
             $environment=$params->teya_environment ?? '';
             if (!in_array($environment,array('live','test'),true) || ($params->teya_session_id ?? '') !== $session) { throw new RuntimeException('Payment session mismatch.'); }
             TeyaHikashopWebhookVerifier::verify($raw,$signature,($params->teya_checkout_public_key ?? TeyaHikashopCredentials::value($method->payment_params,'payment_webhook_public_key',$environment)));
-            $outcome=self::outcome($payload);
-            if ($outcome === 'unsupported') { return; }
-            $data=$payload['data'];
-            if ($outcome === 'success') {
-                $expected=(array) ($params->teya_checkout_amount ?? array('currency'=>TeyaHikashopCheckoutBuilder::currencyCode($order),
-                    'value'=>TeyaHikashopUtils::toMinorUnits($order->order_full_price,TeyaHikashopCheckoutBuilder::currencyCode($order))));
-                if (!isset($data['amount']['value'],$data['amount']['currency']) || (string) $data['amount']['value'] !== (string) $expected['value']
-                    || $data['amount']['currency'] !== $expected['currency']) { throw new RuntimeException('Payment amount or currency mismatch.'); }
-            }
-            $existing=self::outcome((array) ($params->teya_webhook_payload ?? array()));
-            if ($existing === 'success' || ($existing === 'failure' && $outcome === 'failure')) { return; }
-            $params->teya_webhook_payload=$payload;
-            $params->teya_webhook_data=$data;
-            if ($outcome === 'success') { $params->teya_transaction_id=$data['transaction_id']; }
-            $status=$outcome === 'success' ? ($method->payment_params->verified_status ?? 'confirmed') : ($method->payment_params->invalid_status ?? 'cancelled');
-            $this->store->saveOrder($order,$status,'Teya payment '.$outcome.'. Session: '.$session);
-            if ($outcome === 'success' && !empty($method->payment_params->hikashop_merchant_email)) {
-                // Payment state is committed first; a duplicate callback never sends this email again.
-                try { $this->store->notifyMerchant($order, $status); }
-                catch (Throwable $exception) { error_log('[Teya HikaShop] Merchant notification failed: ' . get_class($exception)); }
-            }
+            return $this->applyPayment($method,$order,$payload,'webhook');
         });
+    }
+
+    /** A return URL is not payment evidence; only authenticated Teya session data can confirm an order. */
+    public function reconcileReturn($methodId,$orderId)
+    {
+        return $this->operation($methodId,$orderId,function ($method,$order) {
+            $params=$order->order_payment_params;
+            if (self::outcome((array) ($params->teya_webhook_payload ?? array())) === 'success') { return true; }
+            $session=$params->teya_session_id ?? '';
+            $environment=$params->teya_environment ?? '';
+            if (!is_string($session) || !preg_match('/^[a-zA-Z0-9_-]{1,128}$/D',$session)
+                || !in_array($environment,array('test','live'),true)) { return false; }
+            if ((int) ($params->teya_session_check_after ?? 0)>time()) { return false; }
+            // Bound repeated page refreshes, including failed lookups. No history/email is generated.
+            $params->teya_session_check_after=time()+15;
+            $this->store->saveOrder($order);
+            $client=call_user_func($this->factory,$method->payment_params);
+            try { $response=$client->getCheckoutSession($session,$this->token($method,$environment,false,true),$environment); }
+            catch (TeyaHikashopApiException $exception) {
+                if ($exception->getStatusCode()!==401) { throw $exception; }
+                $response=$client->getCheckoutSession($session,$this->token($method,$environment,true,true),$environment);
+            }
+            if (($response['_http_status'] ?? 0)!==200 || ($response['session_id'] ?? '')!==$session) {
+                throw new RuntimeException('Checkout session verification failed.');
+            }
+            if (($response['session_status'] ?? '')!=='COMPLETED' || ($response['payment_status'] ?? '')!=='SUCCESS') { return false; }
+            if (($response['type'] ?? '')!=='SALE' || !is_string($response['transaction_id'] ?? null)
+                || !preg_match('/^[a-zA-Z0-9_-]{1,128}$/D',$response['transaction_id'])) {
+                throw new RuntimeException('Checkout payment verification failed.');
+            }
+            $attempt=(array) ($params->teya_checkout ?? array());
+            $reference=$attempt['original_payload']['merchant_reference'] ?? ($attempt['payload']['merchant_reference'] ?? null);
+            if ($reference!==null && ($response['merchant_reference'] ?? ($response['source_reference_id'] ?? null))!==$reference) {
+                throw new RuntimeException('Checkout merchant reference mismatch.');
+            }
+            // Persist only payment evidence, never the session's customer/business details or access URL.
+            $amount=is_array($response['amount'] ?? null) ? $response['amount'] : array();
+            $payload=array('event'=>'payment.succeeded.v1','data'=>array('session_id'=>$session,
+                'transaction_id'=>$response['transaction_id'],'status'=>'SUCCESS',
+                'amount'=>array('value'=>$amount['value'] ?? null,'currency'=>$amount['currency'] ?? null)));
+            return $this->applyPayment($method,$order,$payload,'session_lookup');
+        });
+    }
+
+    /** Both entry paths hold the same method/order locks and apply the same financial checks. */
+    private function applyPayment($method,$order,array $payload,$source)
+    {
+        $params=$order->order_payment_params;
+        $outcome=self::outcome($payload);
+        if ($outcome==='unsupported') { return false; }
+        $data=$payload['data'];
+        if ($outcome==='success') {
+            $expected=(array) ($params->teya_checkout_amount ?? array('currency'=>TeyaHikashopCheckoutBuilder::currencyCode($order),
+                'value'=>TeyaHikashopUtils::toMinorUnits($order->order_full_price,TeyaHikashopCheckoutBuilder::currencyCode($order))));
+            $amount=is_array($data['amount'] ?? null) ? $data['amount'] : array();
+            $value=$amount['value'] ?? null;
+            if (!(is_int($value) || (is_string($value) && ctype_digit($value)))
+                || (string) $value!==(string) $expected['value'] || ($amount['currency'] ?? null)!==$expected['currency']) {
+                throw new RuntimeException('Payment amount or currency mismatch.');
+            }
+            if (!empty($params->teya_transaction_id) && $params->teya_transaction_id!==$data['transaction_id']) {
+                throw new RuntimeException('Payment transaction mismatch.');
+            }
+        }
+        $existing=self::outcome((array) ($params->teya_webhook_payload ?? array()));
+        if ($existing==='success' || ($existing==='failure' && $outcome==='failure')) { return $existing==='success'; }
+        // Retain legacy evidence fields so existing refund/recovery paths and upgrades remain compatible.
+        $params->teya_webhook_payload=$payload;
+        $params->teya_webhook_data=$data;
+        $params->teya_payment_confirmation_source=$source;
+        if ($outcome==='success') { $params->teya_transaction_id=$data['transaction_id']; }
+        $status=$outcome==='success' ? ($method->payment_params->verified_status ?? 'confirmed') : ($method->payment_params->invalid_status ?? 'cancelled');
+        $note='Teya payment '.$outcome.'. Session: '.$data['session_id'];
+        if ($source==='session_lookup') { $note.=' (verified by session lookup)'; }
+        $this->store->saveOrder($order,$status,$note);
+        if ($outcome==='success' && !empty($method->payment_params->hikashop_merchant_email)) {
+            try { $this->store->notifyMerchant($order,$status); }
+            catch (Throwable $exception) { error_log('[Teya HikaShop] Merchant notification failed: '.get_class($exception)); }
+        }
+        return $outcome==='success';
     }
     public function beginConnection($methodId,$environment)
     {
@@ -190,6 +252,7 @@ class TeyaHikashopGateway
             $prefix=$environment==='test' ? 'test_' : '';
             foreach (array('client_id','client_secret','payment_webhook_public_key') as $key) { $method->payment_params->{$prefix.$key}=$payload[$key]; }
             $method->payment_params->{$prefix.'access_token'}=$token['access_token'];
+            $method->payment_params->{$prefix.'access_token_scopes'}='';
             $method->payment_params->{$prefix.'access_token_expires_at'}=time()+max(0,(int) ($token['expires_in'] ?? 0)-60);
             $intents[$environment]['completed']=hash('sha256',$raw);
             $method->payment_params->teya_onboarding=$intents;
@@ -214,7 +277,7 @@ class TeyaHikashopGateway
                 }
             }
             $prefix=$environment==='test' ? 'test_' : '';
-            foreach (array('client_id','client_secret','payment_webhook_public_key','access_token','access_token_expires_at') as $key) { $method->payment_params->{$prefix.$key}=''; }
+            foreach (array('client_id','client_secret','payment_webhook_public_key','access_token','access_token_expires_at','access_token_scopes') as $key) { $method->payment_params->{$prefix.$key}=''; }
             $this->store->saveMethod($method);
         });
     }

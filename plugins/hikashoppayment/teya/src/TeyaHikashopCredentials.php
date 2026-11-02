@@ -16,11 +16,13 @@ final class TeyaHikashopCredentials
             'payment_webhook_public_key',
             'access_token',
             'access_token_expires_at',
+            'access_token_scopes',
             'test_client_id',
             'test_client_secret',
             'test_payment_webhook_public_key',
             'test_access_token',
             'test_access_token_expires_at',
+            'test_access_token_scopes',
         );
     }
 

@@ -5,11 +5,13 @@ package-hikashop:
 
 test-hikashop:
 	php tests/hikashop-flow-regression.php
+	php tests/hikashop-return-regression.php
 	php tests/hikashop-regression.php
 	php tests/hikashop-admin-regression.php
 	php tests/hikashop-connection-regression.php
 	php tests/hikashop-refund-diagnostics.php
 	php tests/hikashop-transport-regression.php
+	php -d disable_functions=curl_init tests/hikashop-transport-regression.php
 	php tests/hikashop-localization-regression.php
 	node tests/hikashop-admin-ui-regression.cjs
 	node tests/hikashop-refund-ui-regression.cjs

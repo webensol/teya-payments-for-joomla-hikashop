@@ -123,6 +123,31 @@ class plgHikashoppaymentTeya extends hikashopPaymentPlugin
             return false;
         }
     }
+    public function onHikashopBeforeDisplayView(&$view)
+    {
+        $app=JFactory::getApplication();
+        if (!$app->isClient('site') || $view->getName()!=='checkout' || $view->getLayout()!=='after_end'
+            || empty($view->order->order_id) || ($view->order->order_payment_method ?? '')!==$this->name) { return; }
+        $debug=false;
+        try {
+            $order=hikashop_get('class.order')->get((int) $view->order->order_id);
+            if (!$order || ($order->order_payment_method ?? '')!==$this->name || ($order->order_type ?? '')!=='sale') { return; }
+            $userId=(int) hikashop_loadUser(false);
+            $token=hikaInput::get()->getString('order_token');
+            if ($token==='') { $token=(string) $app->getUserState('com_hikashop.order_token',''); }
+            $owner=$userId>0 && $userId===(int) $order->order_user_id;
+            if (!$owner && ($token==='' || empty($order->order_token) || !hash_equals((string) $order->order_token,$token))) { return; }
+            $method=(new TeyaHikashopStorage())->method((int) $order->order_payment_id);
+            $debug=!empty($method->payment_params->debug);
+            $this->gateway()->reconcileReturn((int) $order->order_payment_id,(int) $order->order_id);
+            $fresh=hikashop_get('class.order')->get((int) $order->order_id);
+            if ($fresh) { $view->order->order_status=$fresh->order_status; }
+        } catch (Throwable $exception) {
+            // An unavailable/unauthorized lookup must not break the return page or mark an order paid.
+            if ($debug) { $this->writeDebugLog('Teya return verification deferred: '.get_class($exception).'; code='.(int) $exception->getCode()); }
+        }
+    }
+
     protected function gateway()
     {
         return new TeyaHikashopGateway(new TeyaHikashopStorage(),function ($params) { return $this->apiClient($params); });
@@ -208,18 +233,20 @@ class plgHikashoppaymentTeya extends hikashopPaymentPlugin
 
     private function apiClient($params)
     {
-        return new TeyaHikashopApiClient(!empty($params->debug), array($this, 'writeLog'));
+        return new TeyaHikashopApiClient(!empty($params->debug), function ($message) { $this->writeDebugLog($message); });
     }
 
     public function writeLog($message)
     {
         if (!empty($this->payment_params->debug) || !empty($this->plugin_params->debug)) {
-            if (method_exists($this, 'writeToLog')) {
-                $this->writeToLog($message);
-            } else {
-                error_log('[Teya HikaShop] ' . $message);
-            }
+            $this->writeDebugLog($message);
         }
+    }
+
+    private function writeDebugLog($message)
+    {
+        if (method_exists($this, 'writeToLog')) { $this->writeToLog($message); }
+        else { error_log('[Teya HikaShop] ' . $message); }
     }
 
     private function requestHeader($name)
