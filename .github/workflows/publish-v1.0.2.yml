@@ -21,6 +21,8 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       TAG: v1.0.2
+      RELEASE_ID: '436267415'
+      RELEASE_COMMIT: 7df75b29c6a0b729012902201a6cc36a80483513
       PACKAGE: pkg_teya_hikashop-1.0.2.zip
       EXPECTED_SHA256: 73d5c78775412c6a59127e78520a6580ee1bbb7c3b355ea63fa501b068cc490f
     steps:
@@ -32,41 +34,24 @@ jobs:
           test "$GITHUB_REF" = refs/heads/main
           git init source
           git -C source remote add origin "https://github.com/$GITHUB_REPOSITORY.git"
-          git -C source fetch --depth=1 origin "$GITHUB_SHA"
+          git -C source fetch --depth=1 origin "$RELEASE_COMMIT"
           git -C source checkout --detach FETCH_HEAD
           cd source
           python3 tools/build-packages.py hikashop
           printf '%s  %s\n' "$EXPECTED_SHA256" "dist/$PACKAGE" | sha256sum --check -
           (cd dist && sha256sum "$PACKAGE" > "$PACKAGE.sha256")
 
-          if gh release view "$TAG" --json isDraft,targetCommitish > /tmp/teya-release-state.json; then
-            python3 - <<'PY'
-          import json
-          import os
-          from pathlib import Path
-
-          release = json.loads(Path('/tmp/teya-release-state.json').read_text())
-          assert release['isDraft'], 'Refusing to modify a published release'
-          assert release['targetCommitish'] == os.environ['GITHUB_SHA'], 'Draft belongs to a different commit'
-          PY
-            gh release upload "$TAG" "dist/$PACKAGE" "dist/$PACKAGE.sha256" --clobber
-          else
-            gh release create "$TAG" "dist/$PACKAGE" "dist/$PACKAGE.sha256" \
-              --draft --target "$GITHUB_SHA" --title "Teya Payments for HikaShop 1.0.2" \
-              --notes-file docs/RELEASE-NOTES.md
-          fi
-
-          gh api "repos/$GH_REPO/releases" --paginate --slurp > /tmp/teya-releases.json
+          gh api "repos/$GH_REPO/releases/$RELEASE_ID" > /tmp/teya-release.json
           python3 - <<'PY'
           import hashlib
           import json
           import os
           from pathlib import Path
 
-          pages = json.loads(Path('/tmp/teya-releases.json').read_text())
-          [release] = [release for page in pages for release in page if release['tag_name'] == os.environ['TAG']]
+          release = json.loads(Path('/tmp/teya-release.json').read_text())
+          assert release['tag_name'] == os.environ['TAG']
           assert release['draft'] and not release['prerelease']
-          assert release['target_commitish'] == os.environ['GITHUB_SHA']
+          assert release['target_commitish'] == os.environ['RELEASE_COMMIT']
           assert release['body'].strip() == Path('docs/RELEASE-NOTES.md').read_text().strip()
           assets = {asset['name']: asset for asset in release['assets']}
           package = os.environ['PACKAGE']
