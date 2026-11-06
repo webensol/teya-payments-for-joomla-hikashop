@@ -6,7 +6,7 @@ Check the selected environment and save it. Test/live connections are separate. 
 
 ## Checkout validation
 
-HUF totals must be whole forints. Unknown currencies are rejected instead of substituted. The final charged total and line-item totals must agree. Browser URLs are not payment evidence. In the 1.0.2 candidate, either a signed payment callback or an authenticated session lookup on an authorized checkout return establishes success after matching the order details.
+HUF totals must be whole forints. Unknown currencies are rejected instead of substituted. The final charged total and line-item totals must agree. Browser URLs are not payment evidence. Since version 1.0.2, either a signed payment callback or an authenticated session lookup on an authorized checkout return establishes success after matching the order details.
 
 ## Refund pending or refused
 
@@ -32,7 +32,7 @@ Version 1.0.1 removes plugin cURL-close, implicit-nullable and stream-header dep
 
 Enable Send HikaShop payment notification to merchant in the Teya payment method and configure HikaShop's payment-notification recipient address. It uses HikaShop's mail template and transport. The setting defaults off and is separate from Teya's own email options. A mail-delivery problem does not roll back or repeat a confirmed payment; check the shop's mail configuration.
 
-## Return verification (1.0.2 candidate)
+## Return verification
 
 The optional session lookup requires `checkout/sessions/id/get`. Existing cached tokens are renewed with that scope when needed. A refusal leaves the original order status unchanged and does not disable normal checkout, refunds or signed callbacks. Check the method's debug log for safe HTTP/error details and resolve the API credential permissions. A return that is not authenticated as the order owner or by the HikaShop order token does not perform a lookup.
 

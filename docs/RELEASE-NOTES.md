@@ -1,6 +1,6 @@
-# Teya Payments for HikaShop 1.0.2 — development build
+# Teya Payments for HikaShop 1.0.2
 
-Prepared 2026-11-02. This candidate is not published; the GitHub release and Joomla update feed remain on v1.0.1.
+Released 2026-11-06. Upgrade by uploading the complete Joomla package over the installed version or by using Joomla’s extension updater.
 
 ## Changes
 
@@ -14,7 +14,7 @@ Prepared 2026-11-02. This candidate is not published; the GitHub release and Joo
 
 The existing payment/security/administrator/connection/localization/browser regressions and new return-flow tests cover return-before-webhook, webhook-before-return, duplicate delivery, refunds after return confirmation, guest/owner authorization, scope migration, 401 refresh, missing permissions, timeouts and mismatched payment data. Real local HTTP tests verify safe errors, debug-off silence, GET headers, scopes and both cURL/stream transports on PHP 8.3 and 8.5.
 
-The candidate still requires a real Teya sandbox test of session lookup and the new scope with plugin-issued credentials. Automated provider responses are controlled fixtures, not real-money transactions.
+The automated tests use controlled provider responses. Session lookup with plugin-issued Teya sandbox credentials remains to be verified.
 
 Native installation of the actual 1.0.2 ZIP, two repeated upgrades, the real frontend return event, guest authorization, signed late callbacks and partial/full refunds pass on Joomla 6.1.0 / HikaShop Starter 6.6.0 / PHP 8.5.9 and Joomla 5.4.8 / HikaShop Starter 6.6.0 / PHP 8.3.35, with MariaDB 11.4. The automated suite includes 105 existing flow checks and 147 new return checks.
 
